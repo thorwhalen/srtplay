@@ -1,0 +1,17 @@
+# srtplay — play an .srt subtitle file as timed text (pure frontend; no Python backend).
+# The Vite build lands in dist/; enlace mounts it at /srtplay/.
+display_name = "srtplay"
+description = "Play subtitles as timed text, at any speed and size."
+access = "public"
+
+frontend_dir = "dist"
+
+# Build step honoured by tw_platform/deploy.py, which injects VITE_PUBLIC_BASE=/srtplay/.
+[build]
+install  = ["npm", "ci", "--no-audit", "--no-fund", "--no-progress"]
+build    = ["npm", "run", "build"]
+env_vars = ["VITE_PUBLIC_BASE"]
+
+[deploy]
+# The server needs only dist/ (and this file); sources and tests never ship.
+exclude = ["src", "public", "node_modules", ".github"]

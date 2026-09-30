@@ -1,0 +1,22 @@
+1
+00:00:01,000 --> 00:00:03,500
+Hello there.
+
+2
+00:00:04,000 --> 00:00:06,000
+<i>A second line,</i>
+split over two.
+
+3
+00:00:05,500 --> 00:00:07,250
+An overlapping cue.
+
+5
+0:00:10.5 --> 0:00:12,000 X1:100 X2:200 Y1:10 Y2:20
+Sloppy timing still parses.
+
+not a cue at all
+
+4
+00:00:08,000 --> 00:00:09,000
+{\an8}Out of order, on top.
