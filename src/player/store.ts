@@ -5,6 +5,7 @@
  * The playback clock is a pure value (see `clock.ts`); actions re-anchor it at
  * `performance.now()`, and the view derives the position each frame.
  */
+import { recent } from '../settings/recent';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { cueIndexAt, durationOf, lastStartingAtOrBefore, parseSrt, type Cue } from '../srt/parse';
@@ -95,7 +96,7 @@ export function cueIndexAtPosition(state: PlayerState, pos: number): number {
 
 // --- actions -----------------------------------------------------------------
 
-export function loadSrtText(fileName: string, text: string): void {
+export function loadSrtText(fileName: string, text: string, { resumeAt = 0 }: { resumeAt?: number } = {}): void {
   const { cues, skipped } = parseSrt(text);
   if (cues.length === 0) {
     set(s => {
@@ -109,12 +110,19 @@ export function loadSrtText(fileName: string, text: string): void {
     s.skipped = skipped;
     s.error = null;
     s.clock = clock.makeClock(timelineLength(cues, s.settings.offsetMs), s.settings.speed);
+    if (resumeAt > 0) s.clock = clock.seek(s.clock, now(), Math.min(resumeAt, s.clock.duration));
   });
 }
 
 export async function loadFile(file: File): Promise<void> {
   try {
-    loadSrtText(file.name, await readText(file));
+    const text = await readText(file);
+    loadSrtText(file.name, text);
+    // Kept as a recent file; opening the same file again picks up where it stopped.
+    if (get().fileName === file.name) {
+      const rec = await recent.opened(file.name, text);
+      if (rec.position > 0) seekTo(rec.position);
+    }
   } catch {
     set(s => {
       s.error = `Could not read “${file.name}”.`;
@@ -193,4 +201,17 @@ export function stepFontSize(n: number): void {
 
 export function stepOffset(n: number): void {
   updateSettings({ offsetMs: stepValue(get().settings.offsetMs, n, OFFSET) });
+}
+
+/** Reopen a recent file where it stopped. */
+export function openRecent(rec: { id: string; text: string; position: number }): void {
+  loadSrtText(rec.id, rec.text, { resumeAt: rec.position });
+  void recent.opened(rec.id, rec.text);
+}
+
+/** Note where playback is, for the recent list (called on pause, every few seconds while playing, and on leaving). */
+export function saveProgress(): void {
+  const state = get();
+  if (!state.fileName) return;
+  void recent.progress(state.fileName, currentPosition(state), clock.isAtEnd(state.clock, now()));
 }

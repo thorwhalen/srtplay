@@ -8,6 +8,7 @@ import { lastStartingAtOrBefore, toSegments, type Cue } from '../srt/parse';
 import { useFrameNow, useWakeLock } from './hooks';
 import { Stepper } from './Stepper';
 import { Timeline } from './Timeline';
+import { recent, type RecentFile } from '../settings/recent';
 
 export function App() {
   const state = usePlayer();
@@ -29,6 +30,21 @@ export function App() {
   useEffect(() => {
     if (clock.playing && position >= clock.duration) player.pausePlayback();
   }, [clock.playing, clock.duration, position]);
+
+  // Where playback is goes to the recent list: on pause, every few seconds while playing, on leaving.
+  useEffect(() => {
+    if (!fileName) return;
+    if (!clock.playing) {
+      player.saveProgress();
+      return;
+    }
+    const timer = setInterval(player.saveProgress, PROGRESS_SAVE_MS);
+    return () => clearInterval(timer);
+  }, [clock.playing, fileName]);
+  useEffect(() => {
+    window.addEventListener('pagehide', player.saveProgress);
+    return () => window.removeEventListener('pagehide', player.saveProgress);
+  }, []);
 
   const commands = useMemo(
     () =>
@@ -258,7 +274,16 @@ function CueText({ cue }: { cue: Cue }) {
   );
 }
 
+const PROGRESS_SAVE_MS = 5000;
+
+const mmss = (ms: number) => {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
 function EmptyState({ onOpen }: { onOpen: () => void }) {
+  const [files, setFiles] = useState<RecentFile[]>([]);
+  useEffect(() => void recent.all().then(setFiles), []);
   return (
     <div className="empty">
       <p className="empty-title">Play subtitles as timed text</p>
@@ -266,6 +291,21 @@ function EmptyState({ onOpen }: { onOpen: () => void }) {
       <button type="button" className="primary" onClick={onOpen}>
         Choose an .srt file
       </button>
+      {files.length > 0 && (
+        <section className="recent" aria-label="Recent files">
+          <p className="hint">Recent</p>
+          <ul>
+            {files.map(f => (
+              <li key={f.id}>
+                <button type="button" onClick={() => player.openRecent(f)}>
+                  <span className="recent-name">{f.id}</span>
+                  <span className="recent-where">{f.position > 0 ? `resume at ${mmss(f.position)}` : f.done ? 'played to the end' : 'not started'}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <p className="hint">The file stays on your device. Press ? for shortcuts.</p>
     </div>
   );
