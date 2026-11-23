@@ -522,3 +522,10 @@ kbd {
   font-size: 22px;
   pointer-events: none;
 }
+
+/* Recent files on the empty screen (settings/recent.ts): each reopens where it stopped. */
+.recent { margin-top: 1.5rem; width: min(28rem, 100%); }
+.recent ul { list-style: none; margin: 0.25rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+.recent button { width: 100%; min-height: 44px; display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: 0.5rem 0.75rem; text-align: left; }
+.recent-name { overflow-wrap: anywhere; }
+.recent-where { opacity: 0.7; white-space: nowrap; font-size: 0.9em; }
